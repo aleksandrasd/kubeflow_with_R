@@ -1,0 +1,154 @@
+components:
+  comp-get-and-process-dataset:
+    executorLabel: exec-get-and-process-dataset
+    inputDefinitions:
+      parameters:
+        max_ngrams:
+          parameterType: NUMBER_INTEGER
+        max_tokens:
+          parameterType: NUMBER_INTEGER
+        min_ngrams:
+          parameterType: NUMBER_INTEGER
+    outputDefinitions:
+      artifacts:
+        dataset:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+  comp-train-and-evaluate:
+    executorLabel: exec-train-and-evaluate
+    inputDefinitions:
+      artifacts:
+        dataset:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+      parameters:
+        param_alpha:
+          parameterType: NUMBER_DOUBLE
+        param_lambda:
+          parameterType: NUMBER_DOUBLE
+        param_threshold:
+          parameterType: NUMBER_DOUBLE
+    outputDefinitions:
+      artifacts:
+        metrics:
+          artifactType:
+            schemaTitle: system.Metrics
+            schemaVersion: 0.0.1
+        model:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+deploymentSpec:
+  executors:
+    exec-get-and-process-dataset:
+      container:
+        args:
+        - --min_ngrams
+        - '{{$.inputs.parameters[''min_ngrams'']}}'
+        - --max_ngrams
+        - '{{$.inputs.parameters[''max_ngrams'']}}'
+        - --max_tokens
+        - '{{$.inputs.parameters[''max_tokens'']}}'
+        - --output
+        - '{{$.outputs.artifacts[''dataset''].path}}'
+        command:
+        - Rscript
+        - main.R
+        image: registry.dev.svc.cluster.local:5000/kubeflow_with_r_example/preprocessing
+    exec-train-and-evaluate:
+      container:
+        args:
+        - --input
+        - '{{$.inputs.artifacts[''dataset''].path}}'
+        - --lambda
+        - '{{$.inputs.parameters[''param_lambda'']}}'
+        - --alpha
+        - '{{$.inputs.parameters[''param_alpha'']}}'
+        - --threshold
+        - '{{$.inputs.parameters[''param_threshold'']}}'
+        - --output
+        - '{{$.outputs.artifacts[''model''].path}}'
+        - --metric_pipeline
+        - '{{$.outputs.artifacts[''metrics''].path}}'
+        command:
+        - Rscript
+        - main.R
+        image: registry.dev.svc.cluster.local:5000/kubeflow_with_r_example/training
+pipelineInfo:
+  name: example-r-pipeline
+root:
+  dag:
+    outputs:
+      artifacts:
+        train-and-evaluate-metrics:
+          artifactSelectors:
+          - outputArtifactKey: metrics
+            producerSubtask: train-and-evaluate
+    tasks:
+      get-and-process-dataset:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-get-and-process-dataset
+        inputs:
+          parameters:
+            max_ngrams:
+              componentInputParameter: max_ngrams
+            max_tokens:
+              componentInputParameter: max_tokens
+            min_ngrams:
+              componentInputParameter: min_ngrams
+        taskInfo:
+          name: get-and-process-dataset
+      train-and-evaluate:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-train-and-evaluate
+        dependentTasks:
+        - get-and-process-dataset
+        inputs:
+          artifacts:
+            dataset:
+              taskOutputArtifact:
+                outputArtifactKey: dataset
+                producerTask: get-and-process-dataset
+          parameters:
+            param_alpha:
+              componentInputParameter: param_alpha
+            param_lambda:
+              componentInputParameter: param_lambda
+            param_threshold:
+              componentInputParameter: param_threshold
+        taskInfo:
+          name: train-and-evaluate
+  inputDefinitions:
+    parameters:
+      max_ngrams:
+        defaultValue: 2.0
+        parameterType: NUMBER_INTEGER
+      max_tokens:
+        defaultValue: 300.0
+        parameterType: NUMBER_INTEGER
+      min_ngrams:
+        defaultValue: 1.0
+        parameterType: NUMBER_INTEGER
+      param_alpha:
+        defaultValue: 1.0
+        parameterType: NUMBER_DOUBLE
+      param_lambda:
+        defaultValue: 1.0
+        parameterType: NUMBER_DOUBLE
+      param_threshold:
+        defaultValue: 0.5
+        parameterType: NUMBER_DOUBLE
+  outputDefinitions:
+    artifacts:
+      train-and-evaluate-metrics:
+        artifactType:
+          schemaTitle: system.Metrics
+          schemaVersion: 0.0.1
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.0.0-beta.8
