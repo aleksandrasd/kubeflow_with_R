@@ -6,7 +6,7 @@ First step is preprocessing - reads data from csv files, splits texts into n-gra
 
 ## kubeflow installation
 
-*Note, I am running kubeflow on PC with 32GM of RAM. WSL (with kubeflow in it) takes ~15 GB of RAM. Kubeflow itself takes only ~5GB of RAM. Rest of RAM is taken by WSL. TODO: can we run kubeflow on less RAM?*
+*Note, I am running kubeflow on PC with 32GM of RAM. WSL (with kubeflow running in it) takes ~15 GB of RAM. Kubeflow itself takes only ~5GB of RAM. Rest of RAM is taken (reserved) by WSL. In other words, you run kubeflow with much less RAM. To learn how to constrain WSL from allocating too much RAM see [Aleksandr Hovhannisyan's post on limiting memory usage in WSL 2](https://www.aleksandrhovhannisyan.com/blog/limiting-memory-usage-in-wsl-2/).*
 
 For running kubeflow on Windows 11, WSL 2 I used the following tools: 
  
